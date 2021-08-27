@@ -1,6 +1,11 @@
-# tetris by Raven Ironwing
-# A simple Tetris clone.
-# I used Tetris by "Kevin Chabowski"<kevin@kch42.de> as a starting point for this game.
+# Tetris Flip by Raven Ironwing (2021)
+# Keyboard controls: WASD: Flip/Rotate, Arrow Keys for moving, Space for dropping.
+# Gamepad controls: D pad moves, A/X rotate, B/Y Flip, right shoulder drops.
+
+# A simple yet full featured Tetris clone.
+# I used and older bare bones version of Tetris by "Kevin Chabowski"<kevin@kch42.de> as a starting point for this game (The one with no levels).
+# Things I added:
+# Next block, music, sound effects, levels, counter clockwise rotation, instant dropping, scoring, centered rotation, improved graphics and window scaling, updated code for python 3, gamepad support, tetris animation.
 
 # Music attributions
 # music0.ogg cuts from NES-Bach-BMV-565, TheOuterLinux, https://opengameart.org/content/nes-bach-bwv-565
@@ -277,6 +282,7 @@ class tetrisApp(object):
 			self.gameover = True
 	
 	def init_game(self):
+		self.flips = 0
 		self.delay = config['delay']
 		self.start_time = self.last_drop = pg.time.get_ticks()
 		self.board = new_board()
@@ -426,7 +432,7 @@ class tetrisApp(object):
 		elif bordercolor[2] > 255: bordercolor[2] = 255
 		return bordercolor
 
-	def tetros_animation(self, row):
+	def tetris_animation(self, row):
 		animatrix = []
 		val = 1
 		for j in range(0, 4):
@@ -503,7 +509,7 @@ class tetrisApp(object):
 					self.score += 1200 * (self.level + 1)
 					self.effects_sounds['tetris'].play()
 					self.lines += 4
-					self.tetros_animation(prevy)
+					self.tetris_animation(prevy)
 
 				self.lines_left = self.lines_required - self.lines
 				if self.lines_left < 0:
@@ -517,8 +523,10 @@ class tetrisApp(object):
 			if orientation == 1:
 				new_stone = rotate_counterclockwise(self.stone)
 			elif orientation == 2:
+				self.flips += 1
 				new_stone = hflip(self.stone)
 			elif orientation == 3:
+				self.flips += 1
 				new_stone = vflip(self.stone)
 			else:
 				new_stone = rotate_clockwise(self.stone)
@@ -544,13 +552,14 @@ class tetrisApp(object):
 		self.draw_matrix(self.next_stone,(2, 2), 1)
 		self.screen.blit(self.play_surface, (1, 1))
 		self.draw_text(self.screen, "Score:", 20, WHITE, self.width + 50, 10)
-		self.draw_text(self.screen, str(self.score), 14, WHITE, self.width + 40, 30)
+		self.draw_text(self.screen, str(self.score), 14, WHITE, self.width + 50, 30)
 		self.draw_text(self.screen, "Level:", 20, WHITE, self.width + 50, 50)
 		self.draw_text(self.screen, str(self.level), 20, WHITE, self.width + 50, 70)
 		self.draw_text(self.screen, "Lines Left", 16, WHITE, self.width + 50, 110)
 		self.draw_text(self.screen, str(self.lines_left), 20, WHITE, self.width + 50, 142)
 		pg.draw.rect(self.screen, WHITE, (self.width + 17, 130, 68, 50), 1)
 		self.draw_text(self.screen, "Next", 20, WHITE, self.width + 50, 250)
+		#self.draw_text(self.screen, "Flips: " + str(self.flips), 20, WHITE, self.width + 50, 190)
 		self.screen.blit(self.next_surface, (self.width + 10, 275))
 		pg.display.update()
 	
@@ -612,21 +621,19 @@ class tetrisApp(object):
 						self.drop()
 
 			for event in pg.event.get():
-				#if event.type == pg.USEREVENT+1:
-				#	self.drop()
 				if event.type == pg.QUIT:
 					self.quit()
 				elif event.type == pg.JOYBUTTONDOWN:
 					if event.button == 0:
 						self.rotate_stone(0)
-					#elif event.button == 1:
-					#	self.rotate_stone(3)
 					elif event.button == 1:
+						self.rotate_stone(3)
+					elif event.button == 5:
 						self.insta_fall()
 					elif event.button == 2:
 						self.rotate_stone(1)
-					#elif event.button == 3:
-					#	self.rotate_stone(2)
+					elif event.button == 3:
+						self.rotate_stone(2)
 					elif event.button in [7, 9]:
 						self.toggle_pause()
 						self.start_game()
