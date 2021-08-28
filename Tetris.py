@@ -148,6 +148,17 @@ def check_collision(board, boarder, shape, offset):
 				return True
 	return False
 
+def check_collision_side(board, boarder, shape, offset):
+	off_x, off_y = offset
+	for cy, row in enumerate(shape):
+		for cx, cell in enumerate(row):
+			try:
+				if (cell and board[ cy + off_y][ cx + off_x]) or (cell and boarder[ cy + off_y + 1][ cx + off_x + 1]):
+					return (cx, cy)
+			except IndexError:
+				return (cx, cy)
+	return False
+
 def remove_row(board, row):
 	del board[row]
 	return [[0 for i in range(config['cols'])]] + board
@@ -174,6 +185,8 @@ class tetrisApp(object):
 		pg.init()
 		pg.mixer.init()
 		pg.key.set_repeat(250,25)
+		self.channel3 = pg.mixer.Channel(2)
+		self.channel4 = pg.mixer.Channel(3)
 		self.font_name = pg.font.match_font(FONT_NAME)  # finds the closest match on computer
 		self.width = config['cell_size']*config['cols']
 		self.height = config['cell_size']*config['rows']
@@ -246,7 +259,7 @@ class tetrisApp(object):
 			self.level += 1
 			#self.board = new_board()
 			pg.mixer.music.stop()
-			self.effects_sounds['levelup'].play()
+			self.channel4.play(self.effects_sounds['levelup'])
 			if self.level > 9:
 				self.delay -= 20
 			else:
@@ -476,7 +489,7 @@ class tetrisApp(object):
 		if not self.gameover and not self.paused:
 			self.stone_y += 1
 			if check_collision(self.board, self.boarder, self.stone, (self.stone_x, self.stone_y)):
-				self.effects_sounds['set'].play()
+				self.channel3.play(self.effects_sounds['set'])
 				self.board = join_matrixes(self.board, self.stone, (self.stone_x, self.stone_y))
 				self.new_stone()
 				rows_removed = 0
@@ -496,18 +509,18 @@ class tetrisApp(object):
 
 				if rows_removed == 1:
 					self.score += 40 * (self.level + 1)
-					self.effects_sounds['line'].play()
+					self.channel4.play(self.effects_sounds['line'])
 				elif rows_removed == 2:
 					self.score += 100 * (self.level + 1)
-					self.effects_sounds['double'].play()
+					self.channel4.play(self.effects_sounds['double'])
 					self.lines += 1
 				elif rows_removed == 3:
 					self.score += 300 * (self.level + 1)
-					self.effects_sounds['tripple'].play()
+					self.channel4.play(self.effects_sounds['tripple'])
 					self.lines += 2
 				elif rows_removed > 3:
 					self.score += 1200 * (self.level + 1)
-					self.effects_sounds['tetris'].play()
+					self.channel4.play(self.effects_sounds['tetris'])
 					self.lines += 4
 					self.tetris_animation(prevy)
 
@@ -519,7 +532,7 @@ class tetrisApp(object):
 
 	def rotate_stone(self, orientation):
 		if not self.gameover and not self.paused:
-			self.effects_sounds['rotate'].play()
+			self.channel3.play(self.effects_sounds['rotate'])
 			if orientation == 1:
 				new_stone = rotate_counterclockwise(self.stone)
 			elif orientation == 2:
@@ -532,12 +545,26 @@ class tetrisApp(object):
 				new_stone = rotate_clockwise(self.stone)
 			if not check_collision(self.board, self.boarder, new_stone, (self.stone_x, self.stone_y)):
 				self.stone = new_stone
+			else:
+				col_point = check_collision_side(self.board, self.boarder, new_stone, (self.stone_x, self.stone_y))
+				if col_point[0] == 2:
+					if not check_collision(self.board, self.boarder, new_stone, (self.stone_x - 1, self.stone_y)):
+						self.stone = new_stone
+						self.move(-1)
+				if col_point[0] == 0:
+					if not check_collision(self.board, self.boarder, new_stone, (self.stone_x + 1, self.stone_y)):
+						self.stone = new_stone
+						self.move(1)
 
 	def toggle_pause(self):
 		now = pg.time.get_ticks()
 		if now - self.start_time > 500:
 			if not self.gameover:
 				self.paused = not self.paused
+		if self.paused:
+			pg.mixer.music.pause()
+		else:
+			pg.mixer.music.unpause()
 	
 	def start_game(self):
 		if self.gameover:
@@ -577,6 +604,8 @@ class tetrisApp(object):
 			'SPACE':	lambda:self.insta_fall(),
 			'a': 		lambda:self.rotate_stone(1),
 			'd': 		lambda:self.rotate_stone(0),
+			'w': lambda: self.rotate_stone(3),
+			's': lambda: self.rotate_stone(2),
 		}
 
 		pg.joystick.init() # Initializes all joysticks/controllers
@@ -626,13 +655,13 @@ class tetrisApp(object):
 				elif event.type == pg.JOYBUTTONDOWN:
 					if event.button == 0:
 						self.rotate_stone(0)
-					elif event.button == 1:
+					elif event.button == 3:
 						self.rotate_stone(3)
 					elif event.button == 5:
 						self.insta_fall()
 					elif event.button == 2:
 						self.rotate_stone(1)
-					elif event.button == 3:
+					elif event.button == 1:
 						self.rotate_stone(2)
 					elif event.button in [7, 9]:
 						self.toggle_pause()
