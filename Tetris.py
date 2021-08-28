@@ -307,11 +307,11 @@ class tetrisApp(object):
 		self.new_stone()
 
 	def create_boarder(self):
-		boarder = [] # creates a matrix of zeros the size of the board surrounded but padded with 1s to use for collision detection.
+		boarder = [] # creates a matrix of zeros the size of the board surrounded but padded with 1s except for on top to use for collision detection.
 		for j in range(0, len(self.board) + 2):
 			new_row = []
 			for i in range(0, len(self.board[0]) + 2):
-				if (j in [0, len(self.board)+1]) or (i in [0, len(self.board[0])+1]):
+				if (j == len(self.board)+1) or (i in [0, len(self.board[0])+1]):
 					val = 1
 				else:
 					val = 0
