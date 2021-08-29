@@ -142,8 +142,12 @@ def check_collision(board, boarder, shape, offset):
 	for cy, row in enumerate(shape):
 		for cx, cell in enumerate(row):
 			try:
-				if (cell and board[ cy + off_y][ cx + off_x]) or (cell and boarder[ cy + off_y + 1][ cx + off_x + 1]):
-					return True
+				if cy + off_y >= 0:
+					if (cell and board[cy + off_y][cx + off_x]) or (cell and boarder[cy + off_y + 3][cx + off_x + 1]):
+						return True
+				else:
+					if (cell and boarder[cy + off_y + 3][cx + off_x + 1]):
+						return True
 			except IndexError:
 				return True
 	return False
@@ -153,7 +157,7 @@ def check_collision_side(board, boarder, shape, offset):
 	for cy, row in enumerate(shape):
 		for cx, cell in enumerate(row):
 			try:
-				if (cell and board[ cy + off_y][ cx + off_x]) or (cell and boarder[ cy + off_y + 1][ cx + off_x + 1]):
+				if (cell and board[ cy + off_y][ cx + off_x]) or (cell and boarder[ cy + off_y + 3][ cx + off_x + 1]):
 					return (cx, cy)
 			except IndexError:
 				return (cx, cy)
@@ -163,16 +167,6 @@ def remove_row(board, row):
 	del board[row]
 	return [[0 for i in range(config['cols'])]] + board
 	
-def join_matrixes(board, mat2, mat2_off):
-	off_x, off_y = mat2_off
-	for cy, row in enumerate(mat2):
-		for cx, val in enumerate(row):
-			try:
-				board[cy+off_y-1][cx+off_x] += val
-			except:
-				pass
-	return board
-
 def new_board():
 	board = [ [ 0 for x in range(config['cols']) ]
 			for y in range(config['rows']) ]
@@ -209,6 +203,7 @@ class tetrisApp(object):
 		self.lines = 0
 		self.lines_required = 0
 		self.lines_left = 0
+		self.start_level = 0
 
 		self.music_list = []
 		number_of_files = len([name for name in listdir(music_folder) if path.isfile(path.join(music_folder, name))])
@@ -219,31 +214,52 @@ class tetrisApp(object):
 		self.current_song = 0
 
 		self.title_surface = pg.Surface((self.width + 82, self.height + 2))
-		self.title_surface.fill(BLACK)
-		self.draw_text(self.title_surface, "Mutant Python Games", 12, GREEN, (self.width + 82) // 2, 125)
-		self.draw_text(self.title_surface, "UP/R CTRL - Rotate", 16, WHITE, (self.width + 82) // 2, 170)
-		self.draw_text(self.title_surface, "Move with arrow keys.", 16, WHITE, (self.width + 82) // 2, 200)
-		self.draw_text(self.title_surface, "Remove rows by completing them", 18, BLUE, (self.width + 82) // 2, 233)
-		self.draw_text(self.title_surface, "Gamepads Supported", 14, WHITE, (self.width + 82) // 2, 255)
-		self.draw_text(self.title_surface, "Press any key/button to begin.", 16, ORANGE, (self.width + 82) // 2, 320)
-		tetris_surface = self.draw_tetris_title()
-		nov_rect = tetris_surface.get_rect()
-		self.title_surface.blit(tetris_surface, ((self.width + 82)//2 - nov_rect.width//2, 50))
-		self.screen.blit(self.title_surface, (10, 0))
-		pg.display.flip()
 
 		pg.joystick.init() # Initializes all joysticks/controllers
 		joysticks = [pg.joystick.Joystick(x) for x in range(pg.joystick.get_count())]
 		loop = True
 		while loop:
+			self.title_surface.fill(BLACK)
+			self.draw_text(self.title_surface, "Mutant Python Games", 12, GREEN, (self.width + 82) // 2, 125)
+			self.draw_text(self.title_surface, "UP/R CTRL - Rotate", 16, WHITE, (self.width + 82) // 2, 170)
+			self.draw_text(self.title_surface, "Move with arrow keys.", 16, WHITE, (self.width + 82) // 2, 200)
+			self.draw_text(self.title_surface, "Remove rows by completing them", 18, BLUE, (self.width + 82) // 2, 233)
+			self.draw_text(self.title_surface, "Gamepads Supported", 14, WHITE, (self.width + 82) // 2, 255)
+			self.draw_text(self.title_surface, "Press any key/button to begin.", 16, ORANGE, (self.width + 82) // 2,
+						   320)
+			self.draw_text(self.title_surface, "+/- or R/L to change level", 16, YELLOW, (self.width + 82) // 2, 360)
+			self.draw_text(self.title_surface, "Start Level = " + str(self.start_level), 16, YELLOW, (self.width + 82) // 2, 380)
+			tetris_surface = self.draw_tetris_title()
+			nov_rect = tetris_surface.get_rect()
+			self.title_surface.blit(tetris_surface, ((self.width + 82) // 2 - nov_rect.width // 2, 50))
+			self.screen.blit(self.title_surface, (10, 0))
+			pg.display.flip()
 			for event in pg.event.get():
 				if event.type == pg.KEYDOWN:
-					loop = False
+					if event.key in [pg.K_PLUS, pg.K_EQUALS, pg.K_MINUS]:
+						if event.key in [pg.K_PLUS, pg.K_EQUALS]:
+							self.start_level += 1
+							if self.start_level > 9:
+								self.start_level = 9
+						elif event.key == pg.K_MINUS:
+							self.start_level -= 1
+							if self.start_level < 0:
+								self.start_level = 0
+					else:
+						loop = False
 				elif event.type == pg.QUIT:
 					self.quit()
 				elif event.type == pg.JOYBUTTONDOWN:
 					if event.button in [0, 1, 2, 3, 6, 7, 8, 9, 10]:
 						loop = False
+					elif event.button == 4:
+						self.start_level -= 1
+						if self.start_level < 0:
+							self.start_level = 0
+					elif event.button == 5:
+						self.start_level += 1
+						if self.start_level > 9:
+							self.start_level = 9
 					elif event.button in [8, 10]:
 						self.quit()
 
@@ -269,6 +285,8 @@ class tetrisApp(object):
 			self.current_song += 1  # Changes song to next in list
 			if self.current_song > len(self.music_list) - 1:
 				self.current_song = 0
+		else:
+			self.delay = config['delay'] - (self.level * 60)
 		self.lines = 0
 		self.lines_required = self.lines_left = (self.level + 1) * 5
 		song = self.music_list[self.current_song]
@@ -283,10 +301,7 @@ class tetrisApp(object):
 			selected_shape = copy.deepcopy(tetris_shapes[rand(len(tetris_shapes))])
 			self.stone = selected_shape
 		self.stone_x = int(config['cols'] / 2 - len(self.stone[0])/2)
-		if sum(self.stone[0]):  # Makes sure stone appears on first line.
-			self.stone_y = 0
-		else:
-			self.stone_y = -1
+		self.stone_y = -3
 
 		next_selected_shape = copy.deepcopy(tetris_shapes[rand(len(tetris_shapes))])
 		self.next_stone = next_selected_shape
@@ -300,18 +315,31 @@ class tetrisApp(object):
 		self.start_time = self.last_drop = pg.time.get_ticks()
 		self.board = new_board()
 		self.boarder = self.create_boarder()
-		self.level = 0
+		self.level = self.start_level
 		self.score = 0
 		self.next_stone = None
 		self.level_up(1)
 		self.new_stone()
 
+	def join_matrixes(self, board, mat2, mat2_off):
+		off_x, off_y = mat2_off
+		for cy, row in enumerate(mat2):
+			for cx, val in enumerate(row):
+				if (cy + off_y - 1 >= 0):
+					try:
+						board[cy + off_y - 1][cx + off_x] += val
+					except:
+						pass
+				else:
+					self.gameover = True
+		return board
+
 	def create_boarder(self):
 		boarder = [] # creates a matrix of zeros the size of the board surrounded but padded with 1s except for on top to use for collision detection.
-		for j in range(0, len(self.board) + 2):
+		for j in range(0, len(self.board) + 4):
 			new_row = []
 			for i in range(0, len(self.board[0]) + 2):
-				if (j == len(self.board)+1) or (i in [0, len(self.board[0])+1]):
+				if (j == len(self.board)+3) or (i in [0, len(self.board[0])+1]):
 					val = 1
 				else:
 					val = 0
@@ -490,7 +518,7 @@ class tetrisApp(object):
 			self.stone_y += 1
 			if check_collision(self.board, self.boarder, self.stone, (self.stone_x, self.stone_y)):
 				self.channel3.play(self.effects_sounds['set'])
-				self.board = join_matrixes(self.board, self.stone, (self.stone_x, self.stone_y))
+				self.board = self.join_matrixes(self.board, self.stone, (self.stone_x, self.stone_y))
 				self.new_stone()
 				rows_removed = 0
 				prevy = 0
@@ -586,6 +614,7 @@ class tetrisApp(object):
 		self.draw_text(self.screen, str(self.lines_left), 20, WHITE, self.width + 50, 142)
 		pg.draw.rect(self.screen, WHITE, (self.width + 17, 130, 68, 50), 1)
 		self.draw_text(self.screen, "Next", 20, WHITE, self.width + 50, 250)
+		self.draw_text(self.screen, "Start Level: " + str(self.start_level), 12, WHITE, self.width + 50, 380)
 		#self.draw_text(self.screen, "Flips: " + str(self.flips), 20, WHITE, self.width + 50, 190)
 		self.screen.blit(self.next_surface, (self.width + 10, 275))
 		pg.display.update()
